@@ -329,6 +329,7 @@ class VirtualMachine {
         else if (instruction->op->opCodeId == OP_DISCARD){
             // todo: check for existence
             stk.pop();
+            ++ip;
         }
         else if (instruction->op->opCodeId == OP_ENDOFPROGRAM){
             printf ("\n\tEND\n\n");
