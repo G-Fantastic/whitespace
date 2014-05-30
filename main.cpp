@@ -51,7 +51,7 @@ enum {
     PARAM_LABEL = 2
 };
 
-const char* asciiToReadable (char c){
+std::string asciiToReadable (char c){
     if (c == TOK_TAB){
         return "[Tab]";
     }
@@ -64,13 +64,16 @@ const char* asciiToReadable (char c){
 
     return "[Inconnu]";
 }
-void displayCode (const char* program){
+
+std::string displayableCode (const char* program){
     char* c = (char*)program;
-    // printf ("%d\n", strlen(program));
+    std::string result = "";
     while (*c){
-        printf ("%s", asciiToReadable(*c));
+        result += asciiToReadable(*c);
         ++c;
     }
+
+    return result;
 }
 
 class whiteOperator {
@@ -194,7 +197,7 @@ public:
 
             tokens.push_back (t);
         }
-        printf ("done parsing");
+        printf ("done parsing\n");
         return tokens;
     }
     void parseInstruction(char* instruction, token* t){
@@ -203,7 +206,6 @@ public:
             int opCodeLength = validOperators[i].opCode.length();
             if(strncmp (instruction, validOperators[i].opCode.c_str(), opCodeLength) == 0){
                 id = i;
-                printf("%s\n", validOperators[i].description.c_str());
                 break;
             }
         }
@@ -233,13 +235,14 @@ public:
             ++pos;
         }
         std::string value(instruction, 0, pos);
+        // printf ("Plop\n%s %d\n", displayableCode(value.c_str()).c_str(), pos);
 
         return value;
     }
 
     void writeProgram(std::vector<token> tokens){
         for (int i = 0; i < tokens.size(); ++i){
-            printf ("%s %s\n", tokens[i].op->description.c_str(), tokens[i].paramValue.c_str());
+            printf ("%s %s\n", tokens[i].op->description.c_str(), displayableCode(tokens[i].paramValue.c_str()).c_str());
         }
     }
 };
@@ -263,11 +266,11 @@ public:
             Parser g_Parser;
             char *content = readFileContent(this->argv[1]);
             
-            displayCode(content);
-
+            // printf ("%s", displayableCode(content).c_str());
+            
             std::vector<token> tokens = g_Parser.parseProgram((char*)content);
             g_Parser.writeProgram (tokens);
-
+            
             free(content);
         }
         return EXIT_SUCCESS;
