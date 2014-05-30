@@ -272,11 +272,100 @@ public:
 class VirtualMachine {
     std::stack<int> stk;
     std::map<std::string, int> labels;
-
+    int ip;
+    Parser parser;
+    void executeInstruction (token* instruction){
+        if (instruction->op->opCodeId == OP_PUSH){
+            stk.push (parser.parseInteger(instruction->paramValue));
+            ++ip;   
+        }
+        else if (instruction->op->opCodeId == OP_DUP){
+            // todo: check stack size
+            stk.push (stk.top());
+            ++ip;
+        }
+        else if (instruction->op->opCodeId == OP_ADD){
+            // todo: check stack size
+            int a = stk.top();
+            stk.pop();
+            int b = stk.top();
+            stk.pop();
+            stk.push (a + b);
+            ++ip;
+        }
+        else if (instruction->op->opCodeId == OP_SUB){
+            // todo: check stack size
+            int a = stk.top();
+            stk.pop();
+            int b = stk.top();
+            stk.pop();
+            stk.push (b - a);
+            ++ip;
+        }
+        else if (instruction->op->opCodeId == OP_SETLABEL){
+            // Label creation has already been done during initialization
+            ++ip;
+        }
+        else if (instruction->op->opCodeId == OP_PRINT_I){
+            // todo: check stack size
+            int stackTop = stk.top();
+            stk.pop();
+            printf ("%d", stackTop);
+            ++ip;
+        }
+        else if (instruction->op->opCodeId == OP_PRINT_C){
+            // todo: check stack size
+            int stackTop = stk.top();
+            stk.pop();
+            printf ("%c", (char)stackTop);
+            ++ip;
+        }
+        else if (instruction->op->opCodeId == OP_JZERO){
+            // todo: check stack size
+            int stackTop = stk.top();
+            stk.pop();
+            if (stackTop == 0)
+                ip = labels[instruction->paramValue];
+            else
+                ++ip;
+        }
+        else if (instruction->op->opCodeId == OP_JUMP){
+            // todo: check for existence
+            ip = labels[instruction->paramValue];
+        }
+        else if (instruction->op->opCodeId == OP_DISCARD){
+            // todo: check for existence
+            stk.pop();
+        }
+        else if (instruction->op->opCodeId == OP_ENDOFPROGRAM){
+            printf ("\n\tEND\n\n");
+            ip = -1;
+        }
+        else {
+            printf ("Unkown instruction : %s\n", instruction->op->description.c_str());
+            ++ip;
+        }
+    }
 public:
     void execute (std::vector<token> instructions){
+        ip = 0;
+        labels.clear();
+        stk = std::stack<int>();
+        
+        for (int i = 0; i < instructions.size(); ++i){
+            if (instructions[i].op->opCodeId == OP_SETLABEL){
+                // todo: check for unicity
+                labels[instructions[i].paramValue] = i;
+            }
+        }
 
+        printf ("\n\tSTART\n");
+        
+        while (ip != -1) {
+            executeInstruction (&instructions[ip]);
+        }
     }
+
 };
 
 class Application {
