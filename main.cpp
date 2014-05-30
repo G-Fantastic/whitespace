@@ -6,13 +6,6 @@
 #include <stack>
 #include <map>
 
-// The list of valid characters
-enum {
-    TOK_TAB   = '\t',
-    TOK_LF    = '\n',
-    TOK_SP    = ' '
-};
-
 // The list of existing operators
 enum OP_CODES {
     // stack manipulation
@@ -54,13 +47,13 @@ enum {
 };
 
 std::string asciiToReadable (char c){
-    if (c == TOK_TAB){
+    if (c == '\t'){
         return "[Tab]";
     }
-    else if (c == TOK_LF){
+    else if (c == '\n'){
         return "[LF]";
     }
-    else if (c == TOK_SP){
+    else if (c == ' '){
         return "[Space]";
     }
 
