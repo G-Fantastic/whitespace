@@ -3,6 +3,8 @@
 #include <string>
 #include <stdlib.h>
 #include <vector>
+#include <stack>
+#include <map>
 
 // The list of valid characters
 enum {
@@ -235,18 +237,47 @@ public:
             ++pos;
         }
         std::string value(instruction, 0, pos);
-        // printf ("Plop\n%s %d\n", displayableCode(value.c_str()).c_str(), pos);
 
         return value;
     }
 
+    int parseInteger (std::string value){
+        int sign = value[0] == ' ' ? 1 : -1;
+        int intValue = 0;
+        for (int i = 1; i < value.length();++i){
+            if (value[i] == ' '){
+                intValue *= 2;
+            }
+            else {
+                intValue = 2 * intValue +1;
+            }
+        }
+
+        return intValue * sign;
+    }
+
     void writeProgram(std::vector<token> tokens){
         for (int i = 0; i < tokens.size(); ++i){
-            printf ("%s %s\n", tokens[i].op->description.c_str(), displayableCode(tokens[i].paramValue.c_str()).c_str());
+            if (tokens[i].op->paramType == PARAM_INT) {
+                printf ("%s %d (%s)\n", tokens[i].op->description.c_str(), parseInteger(tokens[i].paramValue), displayableCode(tokens[i].paramValue.c_str()).c_str());
+            }
+            else {
+                printf ("%s %s\n", tokens[i].op->description.c_str(), displayableCode(tokens[i].paramValue.c_str()).c_str());
+            }
         }
     }
 };
 
+
+class VirtualMachine {
+    std::stack<int> stk;
+    std::map<std::string, int> labels;
+
+public:
+    void execute (std::vector<token> instructions){
+
+    }
+};
 
 class Application {
     int argc;
@@ -268,9 +299,12 @@ public:
             
             // printf ("%s", displayableCode(content).c_str());
             
-            std::vector<token> tokens = g_Parser.parseProgram((char*)content);
-            g_Parser.writeProgram (tokens);
+            std::vector<token> instructions = g_Parser.parseProgram((char*)content);
+            g_Parser.writeProgram (instructions);
             
+            VirtualMachine vm;
+            vm.execute(instructions);
+
             free(content);
         }
         return EXIT_SUCCESS;
