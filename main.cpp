@@ -60,13 +60,13 @@ enum CAT_OP {
 
 std::string asciiToReadable (char c){
     if (c == '\t'){
-        return "[Tab]";
+        return "T";
     }
     else if (c == '\n'){
-        return "[LF]";
+        return "L";
     }
     else if (c == ' '){
-        return "[Space]";
+        return "S";
     }
 
     return "[Inconnu]";
@@ -318,6 +318,15 @@ class VirtualMachine {
             // todo: check for existence
             stk.pop();
         }
+        else if (instruction->op->opCodeId == OP_SWAP) {
+            // todo: check for existence
+            int a = stk.top();
+            stk.pop();
+            int b = stk.top();
+            stk.pop();
+            stk.push (a);
+            stk.push (b);
+        }
         /*
             Todo: implement copy, slide and swap
         */
@@ -423,7 +432,6 @@ class VirtualMachine {
             callstack.pop();
         }
         else if (instruction->op->opCodeId == OP_END_PROGRAM){
-            // printf ("\n\tEND\n\n");
             ip = -1;
         }
     }
@@ -446,7 +454,24 @@ class VirtualMachine {
             printf ("%c", (char)stackTop);
             ++ip;
         }
-        // Todo : implement read_i and read_c
+        else if (instruction->op->opCodeId == OP_READ_I){
+            // todo: check heap size
+            int i;
+            scanf ("%d", &i);
+            int address = stk.top();
+            stk.pop();
+            heap[address] = i;
+            ++ip;
+        }
+        else if (instruction->op->opCodeId == OP_READ_I){
+            // todo: check heap size
+            int c;
+            scanf ("%c", (char*)&c);
+            int address = stk.top();
+            stk.pop();
+            heap[address] = c;
+            ++ip;
+        }
         else {
             printf ("Unkown instruction : %s\n", instruction->op->description.c_str());
             ++ip;
@@ -495,7 +520,7 @@ public:
             // printf ("%s", displayableCode(content).c_str());
             
             std::vector<token> instructions = g_Parser.parseProgram((char*)content);
-            // g_Parser.writeProgram (instructions);
+            g_Parser.writeProgram (instructions);
             
             VirtualMachine vm;
             vm.execute(instructions);
