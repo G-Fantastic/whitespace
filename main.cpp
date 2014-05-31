@@ -307,86 +307,51 @@ class VirtualMachine {
         Stack operations
     */
     void executeStackInstruction (token* instruction){
-        if (instruction->op->opCodeId == OP_PUSH){
+        if (instruction->op->opCodeId == OP_PUSH) {
             stk.push (parser.parseInteger(instruction->paramValue));
-            ++ip;   
         }
-        else if (instruction->op->opCodeId == OP_DUP){
+        else if (instruction->op->opCodeId == OP_DUP) {
             // todo: check stack size
             stk.push (stk.top());
-            ++ip;
         }
-        else if (instruction->op->opCodeId == OP_DISCARD){
+        else if (instruction->op->opCodeId == OP_DISCARD) {
             // todo: check for existence
             stk.pop();
-            ++ip;
         }
         /*
             Todo: implement copy, slide and swap
         */
         else {
             printf ("Unkown instruction : %s\n", instruction->op->description.c_str());
-            ++ip;
         }
+        ++ip;
     }
 
     /*
         Arithmetic operations
     */
     void executeArithmeticInstruction (token* instruction){
-        /*
-            Arithmetic instructions
-            Should be refactored into something shorter
-        */
-        if (instruction->op->opCodeId == OP_ADD){
-            // todo: check stack size
-            int a = stk.top();
-            stk.pop();
-            int b = stk.top();
-            stk.pop();
+        // todo: check stack size
+        int a = stk.top();
+        stk.pop();
+        int b = stk.top();
+        stk.pop();
+        if (instruction->op->opCodeId == OP_ADD){          
             stk.push (b + a);
-            ++ip;
         }
         else if (instruction->op->opCodeId == OP_SUB){
-            // todo: check stack size
-            int a = stk.top();
-            stk.pop();
-            int b = stk.top();
-            stk.pop();
             stk.push (b - a);
-            ++ip;
         }
         else if (instruction->op->opCodeId == OP_MUL){
-            // todo: check stack size
-            int a = stk.top();
-            stk.pop();
-            int b = stk.top();
-            stk.pop();
             stk.push (b * a);
-            ++ip;
         }
         else if (instruction->op->opCodeId == OP_DIV){
-            // todo: check stack size
-            int a = stk.top();
-            stk.pop();
-            int b = stk.top();
-            stk.pop();
             stk.push (b / a);
-            ++ip;
         }
         else if (instruction->op->opCodeId == OP_MOD){
-            // todo: check stack size
-            int a = stk.top();
-            stk.pop();
-            int b = stk.top();
-            stk.pop();
             stk.push (b % a);
-            ++ip;
         }
-        else {
-            printf ("Unkown instruction : %s\n", instruction->op->description.c_str());
-            ++ip;
-        }
+        ++ip;
     }
 
     /*
@@ -413,10 +378,6 @@ class VirtualMachine {
             // todo : check heap size;
             stk.push (heap[address]);
 
-            ++ip;
-        }
-        else {
-            printf ("Unkown instruction : %s\n", instruction->op->description.c_str());
             ++ip;
         }
     }
@@ -464,10 +425,6 @@ class VirtualMachine {
         else if (instruction->op->opCodeId == OP_END_PROGRAM){
             // printf ("\n\tEND\n\n");
             ip = -1;
-        }
-        else {
-            printf ("Unkown instruction : %s\n", instruction->op->description.c_str());
-            ++ip;
         }
     }
 
