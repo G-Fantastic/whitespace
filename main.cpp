@@ -406,6 +406,28 @@ class VirtualMachine {
         /*
             Heap manipulation
         */
+        else if (instruction->op->opCodeId == OP_STORE){
+            // todo : check stack size;
+            int value = stk.top();
+            stk.pop();
+            int address = stk.top();
+            stk.pop();
+            
+            // todo : check heap size;
+            heap[address] = value;
+
+            ++ip;
+        }
+        else if (instruction->op->opCodeId == OP_RETRIEVE){
+            // todo : check stack size;
+            int address = stk.top();
+            stk.pop();
+
+            // todo : check heap size;
+            stk.push (heap[address]);
+
+            ++ip;
+        }
         // Todo : implement store and retrieve
         /*
             Error
@@ -423,7 +445,7 @@ public:
         callstack = std::stack<int>();
         heap.clear();
         // Defaut size = 64 bytes, resized when necessary
-        heap.resize(64);
+        heap.resize(1024);
         
         for (int i = 0; i < instructions.size(); ++i){
             if (instructions[i].op->opCodeId == OP_SETLABEL){
