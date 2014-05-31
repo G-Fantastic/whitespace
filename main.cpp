@@ -6,6 +6,8 @@
 #include <stack>
 #include <map>
 
+typedef unsigned int uint;
+
 // The list of existing operators
 enum OP_CODES {
     // stack manipulation
@@ -24,7 +26,7 @@ enum OP_CODES {
     // Heap manipulation
     OP_STORE,
     OP_RETRIEVE,
-    // FLow control
+    // Flow control
     OP_SETLABEL,
     OP_CALL_SUBROUTINE,
     OP_JUMP,
@@ -36,7 +38,7 @@ enum OP_CODES {
     OP_PRINT_C,
     OP_PRINT_I,
     OP_READ_C,
-    OP_READ_I,
+    OP_READ_I
 };
 
 // An opcode can have no params, or either an integer or a label
@@ -44,6 +46,16 @@ enum {
     PARAM_NONE    = 0,
     PARAM_INT   = 1,
     PARAM_LABEL = 2
+};
+
+// The categories for the different operations
+enum CAT_OP {
+    // stack manipulation
+    CAT_STACK,
+    CAT_ARITH,
+    CAT_HEAP,
+    CAT_FLOW,
+    CAT_IO
 };
 
 std::string asciiToReadable (char c){
@@ -77,6 +89,7 @@ public:
     int paramType;
     char opCodeId;
     std::string description;
+    int category;
 };
 
 whiteOperator validOperators[] = {
@@ -94,12 +107,12 @@ whiteOperator validOperators[] = {
     [Tab][LF]   Number  Slide n items off the stack, keeping the top item
     The copy and slide instructions are an extension implemented in Whitespace 0.3 and are designed to facilitate the implementation of recursive functions. The idea is that local variables are referred to using [Space][Tab][Space], then on return, you can push the return value onto the top of the stack and use [Space][Tab][LF] to discard the local variables.
     */
-    { "  "       , PARAM_INT  , OP_PUSH,"push"         } , // push the param onto the stack
-    { " \n "     , PARAM_NONE , OP_DUP,"dup"          } , // duplicate top item
-    { " \t "     , PARAM_INT  , OP_COPY,"copy"         } , //copy the nth item on stack onto the stack
-    { " \n\t"    , PARAM_NONE , OP_SWAP,"swap"         } , //swap the top two items on the stack
-    { " \n\n"    , PARAM_NONE , OP_DISCARD,"discard"      } , //discard the top item
-    { " \t\n"    , PARAM_INT  , OP_SLIDE,"slide"        } , //slide n items off the stack
+    { "  "    , PARAM_INT  , OP_PUSH    , "push"    , CAT_STACK     } , // push the param onto the stack
+    { " \n "  , PARAM_NONE , OP_DUP     , "dup"     , CAT_STACK     } , // duplicate top item
+    { " \t "  , PARAM_INT  , OP_COPY    , "copy"    , CAT_STACK     } , //copy the nth item on stack onto the stack
+    { " \n\t" , PARAM_NONE , OP_SWAP    , "swap"    , CAT_STACK     } , //swap the top two items on the stack
+    { " \n\n" , PARAM_NONE , OP_DISCARD , "discard" , CAT_STACK     } , //discard the top item
+    { " \t\n" , PARAM_INT  , OP_SLIDE   , "slide"   , CAT_STACK     } , //slide n items off the stack
     /*
     Arithmetic (IMP: [Tab][Space])
 
@@ -112,11 +125,11 @@ whiteOperator validOperators[] = {
     [Tab][Space]    -   Integer Division
     [Tab][Tab]  -   Modulo
     */
-    { "\t   "  , PARAM_NONE , OP_ADD , "add"         }  , // push the param onto the stack
-    { "\t  \t" , PARAM_NONE , OP_SUB , "sub"          } , // duplicate top item
-    { "\t "    , PARAM_NONE , OP_MUL , "mul"         }  , //copy the nth item on stack onto the stack
-    { "\t "    , PARAM_NONE , OP_DIV , "div"         }  , //swap the top two items on the stack
-    { "\t "    , PARAM_NONE , OP_MOD , "mod"      }     , //discard the top item
+    { "\t   "  , PARAM_NONE , OP_ADD , "add" , CAT_ARITH        }  , // push the param onto the stack
+    { "\t  \t" , PARAM_NONE , OP_SUB , "sub" , CAT_ARITH         } , // duplicate top item
+    { "\t "    , PARAM_NONE , OP_MUL , "mul" , CAT_ARITH        }  , //copy the nth item on stack onto the stack
+    { "\t "    , PARAM_NONE , OP_DIV , "div" , CAT_ARITH        }  , //swap the top two items on the stack
+    { "\t "    , PARAM_NONE , OP_MOD , "mod" , CAT_ARITH     }     , //discard the top item
     /*
     Heap Access (IMP: [Tab][Tab])
 
@@ -126,8 +139,8 @@ whiteOperator validOperators[] = {
     [Space] -   Store
     [Tab]   -   Retrieve
     */
-    { "\t\t "  , PARAM_NONE , OP_STORE    , "store"        } , 
-    { "\t\t\t" , PARAM_NONE , OP_RETRIEVE , "retrieve"     } , 
+    { "\t\t "  , PARAM_NONE , OP_STORE    , "store"    , CAT_HEAP    } , 
+    { "\t\t\t" , PARAM_NONE , OP_RETRIEVE , "retrieve" , CAT_HEAP    } , 
     /*
     Flow Control (IMP: [LF])
 
@@ -142,13 +155,13 @@ whiteOperator validOperators[] = {
     [Tab][LF]   -   End a subroutine and transfer control back to the caller
     [LF][LF]    -   End the program
     */
-    { "\n  "   , PARAM_LABEL , OP_SETLABEL        , "setlabel" }        , // Mark a location in the program
-    { "\n \t"  , PARAM_LABEL , OP_CALL_SUBROUTINE , "call_subroutine" } , // Call a subroutine
-    { "\n \n"  , PARAM_LABEL , OP_JUMP            , "jump" }            , // Jump unconditionally to a label
-    { "\n\t "  , PARAM_LABEL , OP_JZERO           , "jzero" }           , // Jump to a label if the top of the stack is zero
-    { "\n\t\t" , PARAM_LABEL , OP_JNEG            , "jneg" }            , // Jump to a label if the top of the stack is zero
-    { "\n\t\n" , PARAM_NONE  , OP_END_SUBROUTINE , "endofsubroutine" } , // End a subroutine and transfer control back to the caller
-    { "\n\n\n" , PARAM_NONE  , OP_END_PROGRAM    , "endofprogram" }    , 
+    { "\n  "   , PARAM_LABEL , OP_SETLABEL        , "setlabel"        , CAT_FLOW } , // Mark a location in the program
+    { "\n \t"  , PARAM_LABEL , OP_CALL_SUBROUTINE , "call_subroutine" , CAT_FLOW } , // Call a subroutine
+    { "\n \n"  , PARAM_LABEL , OP_JUMP            , "jump"            , CAT_FLOW } , // Jump unconditionally to a label
+    { "\n\t "  , PARAM_LABEL , OP_JZERO           , "jzero"           , CAT_FLOW } , // Jump to a label if the top of the stack is zero
+    { "\n\t\t" , PARAM_LABEL , OP_JNEG            , "jneg"            , CAT_FLOW } , // Jump to a label if the top of the stack is zero
+    { "\n\t\n" , PARAM_NONE  , OP_END_SUBROUTINE  , "endofsubroutine" , CAT_FLOW } , // End a subroutine and transfer control back to the caller
+    { "\n\n\n" , PARAM_NONE  , OP_END_PROGRAM     , "endofprogram"    , CAT_FLOW } ,
     /*
     I/O (IMP: [Tab][LF])
 
@@ -163,10 +176,10 @@ whiteOperator validOperators[] = {
     [Tab][Space]    -   Read a character and place it in the location given by the top of the stack
     [Tab][Tab]  -   Read a number and place it in the location given by the top of the stack
     */
-    { "\t\n  "   , PARAM_NONE , OP_PRINT_C , "print_c"      } , 
-    { "\t\n \t"  , PARAM_NONE , OP_PRINT_I , "print_i"      } , 
-    { "\t\n\t "  , PARAM_NONE , OP_READ_C  , "read_c"       } , 
-    { "\t\n\t\t" , PARAM_NONE , OP_READ_I  , "read_i"       } , 
+    { "\t\n  "   , PARAM_NONE , OP_PRINT_C , "print_c" , CAT_IO     } , 
+    { "\t\n \t"  , PARAM_NONE , OP_PRINT_I , "print_i" , CAT_IO     } , 
+    { "\t\n\t "  , PARAM_NONE , OP_READ_C  , "read_c"  , CAT_IO     } , 
+    { "\t\n\t\t" , PARAM_NONE , OP_READ_I  , "read_i"  , CAT_IO     } , 
 } ;
 
 
@@ -192,13 +205,12 @@ public:
 
             tokens.push_back (t);
         }
-        printf ("done parsing\n");
         return tokens;
     }
     void parseInstruction(char* instruction, token* t){
         int id = -1;
         for (int i = 0; i < 24; ++i){
-            int opCodeLength = validOperators[i].opCode.length();
+            uint opCodeLength = validOperators[i].opCode.length();
             if(strncmp (instruction, validOperators[i].opCode.c_str(), opCodeLength) == 0){
                 id = i;
                 break;
@@ -237,7 +249,7 @@ public:
     int parseInteger (std::string value){
         int sign = value[0] == ' ' ? 1 : -1;
         int intValue = 0;
-        for (int i = 1; i < value.length();++i){
+        for (uint i = 1; i < value.length();++i){
             if (value[i] == ' '){
                 intValue *= 2;
             }
@@ -250,7 +262,7 @@ public:
     }
 
     void writeProgram(std::vector<token> tokens){
-        for (int i = 0; i < tokens.size(); ++i){
+        for (uint i = 0; i < tokens.size(); ++i){
             if (tokens[i].op->paramType == PARAM_INT) {
                 printf ("%s %d (%s)\n", tokens[i].op->description.c_str(), parseInteger(tokens[i].paramValue), displayableCode(tokens[i].paramValue.c_str()).c_str());
             }
@@ -269,10 +281,32 @@ class VirtualMachine {
     std::stack<int> callstack; // List of alreayd executed calls so it is possible to transfer back to control to the caller at the end of a routine
     int ip; // instruction pointer;
     Parser parser;
+
     void executeInstruction (token* instruction){
-        /*
-            Stack instructions
-        */
+        if (instruction->op->category == CAT_STACK){
+            executeStackInstruction (instruction);
+        }
+        else if (instruction->op->category == CAT_ARITH){
+            executeArithmeticInstruction (instruction);
+        }
+        else if (instruction->op->category == CAT_HEAP){
+            executeHeapInstruction (instruction);
+        }
+        else if (instruction->op->category == CAT_FLOW){
+            executeFlowInstruction (instruction);
+        }
+        else if (instruction->op->category == CAT_IO){
+            executeIOInstruction (instruction);
+        }
+        else {
+            // Error
+        }
+    }
+
+    /*
+        Stack operations
+    */
+    void executeStackInstruction (token* instruction){
         if (instruction->op->opCodeId == OP_PUSH){
             stk.push (parser.parseInteger(instruction->paramValue));
             ++ip;   
@@ -290,11 +324,21 @@ class VirtualMachine {
         /*
             Todo: implement copy, slide and swap
         */
+        else {
+            printf ("Unkown instruction : %s\n", instruction->op->description.c_str());
+            ++ip;
+        }
+    }
+
+    /*
+        Arithmetic operations
+    */
+    void executeArithmeticInstruction (token* instruction){
         /*
             Arithmetic instructions
             Should be refactored into something shorter
         */
-        else if (instruction->op->opCodeId == OP_ADD){
+        if (instruction->op->opCodeId == OP_ADD){
             // todo: check stack size
             int a = stk.top();
             stk.pop();
@@ -339,31 +383,49 @@ class VirtualMachine {
             stk.push (b % a);
             ++ip;
         }
-
-        /*
-            I/O operations
-        */
-        else if (instruction->op->opCodeId == OP_PRINT_I){
-            // todo: check stack size
-            int stackTop = stk.top();
-            stk.pop();
-            printf ("%d", stackTop);
+        else {
+            printf ("Unkown instruction : %s\n", instruction->op->description.c_str());
             ++ip;
         }
-        else if (instruction->op->opCodeId == OP_PRINT_C){
-            // todo: check stack size
-            int stackTop = stk.top();
+    }
+
+    /*
+        Heap manipulation
+    */
+    void executeHeapInstruction (token* instruction){
+        if (instruction->op->opCodeId == OP_STORE){
+            // todo : check stack size;
+            int value = stk.top();
             stk.pop();
-            printf ("%c", (char)stackTop);
+            int address = stk.top();
+            stk.pop();
+            
+            // todo : check heap size;
+            heap[address] = value;
+
             ++ip;
         }
-        // Todo : implement read_i and read_c
-        
+        else if (instruction->op->opCodeId == OP_RETRIEVE){
+            // todo : check stack size;
+            int address = stk.top();
+            stk.pop();
 
-        /*
-            Flow control instructions
-        */
-        else if (instruction->op->opCodeId == OP_SETLABEL){
+            // todo : check heap size;
+            stk.push (heap[address]);
+
+            ++ip;
+        }
+        else {
+            printf ("Unkown instruction : %s\n", instruction->op->description.c_str());
+            ++ip;
+        }
+    }
+
+    /*
+        Flow control instructions
+    */
+    void executeFlowInstruction (token* instruction){
+        if (instruction->op->opCodeId == OP_SETLABEL){
             // Label creation has already been done during initialization
             ++ip;
         }
@@ -400,45 +462,41 @@ class VirtualMachine {
             callstack.pop();
         }
         else if (instruction->op->opCodeId == OP_END_PROGRAM){
-            printf ("\n\tEND\n\n");
+            // printf ("\n\tEND\n\n");
             ip = -1;
         }
-        /*
-            Heap manipulation
-        */
-        else if (instruction->op->opCodeId == OP_STORE){
-            // todo : check stack size;
-            int value = stk.top();
-            stk.pop();
-            int address = stk.top();
-            stk.pop();
-            
-            // todo : check heap size;
-            heap[address] = value;
-
-            ++ip;
-        }
-        else if (instruction->op->opCodeId == OP_RETRIEVE){
-            // todo : check stack size;
-            int address = stk.top();
-            stk.pop();
-
-            // todo : check heap size;
-            stk.push (heap[address]);
-
-            ++ip;
-        }
-        // Todo : implement store and retrieve
-        /*
-            Error
-        */
         else {
             printf ("Unkown instruction : %s\n", instruction->op->description.c_str());
             ++ip;
         }
     }
-public:
-    void execute (std::vector<token> instructions){
+
+    /*
+        I/O operations
+    */
+    void executeIOInstruction (token* instruction){
+        if (instruction->op->opCodeId == OP_PRINT_I){
+            // todo: check stack size
+            int stackTop = stk.top();
+            stk.pop();
+            printf ("%d", stackTop);
+            ++ip;
+        }
+        else if (instruction->op->opCodeId == OP_PRINT_C){
+            // todo: check stack size
+            int stackTop = stk.top();
+            stk.pop();
+            printf ("%c", (char)stackTop);
+            ++ip;
+        }
+        // Todo : implement read_i and read_c
+        else {
+            printf ("Unkown instruction : %s\n", instruction->op->description.c_str());
+            ++ip;
+        }
+    }
+
+    void initializeVM(std::vector<token>& instructions){
         ip = 0;
         labels.clear();
         stk = std::stack<int>();
@@ -447,44 +505,40 @@ public:
         // Defaut size = 64 bytes, resized when necessary
         heap.resize(1024);
         
-        for (int i = 0; i < instructions.size(); ++i){
+        for (uint i = 0; i < instructions.size(); ++i){
             if (instructions[i].op->opCodeId == OP_SETLABEL){
                 // todo: check for unicity
                 labels[instructions[i].paramValue] = i;
             }
         }
+        // printf ("\n\tSTART\n");
+    }
 
-        printf ("\n\tSTART\n");
-        
+public:
+    void execute (std::vector<token>& instructions){
+        initializeVM(instructions);
+
         while (ip != -1) {
             executeInstruction (&instructions[ip]);
         }
     }
-
 };
 
 class Application {
-    int argc;
-    char** argv;
-
 public:
-    Application (int argc, char** argv) {
-        this->argc = argc;
-        this->argv = argv;
-    }
-    int run (){
-        if (this->argc < 2){
-            printf ("usage :\n%s filename\n", this->argv[0]);
+    int run (int argc, char** argv){
+        if (argc < 2){
+            printf ("usage :\n%s filename\n", argv[0]);
             return EXIT_SUCCESS;
         }
         else {
             Parser g_Parser;
-            char *content = readFileContent(this->argv[1]);
+            char *content = readFileContent(argv[1]);
             
             // printf ("%s", displayableCode(content).c_str());
             
             std::vector<token> instructions = g_Parser.parseProgram((char*)content);
-            g_Parser.writeProgram (instructions);
+            // g_Parser.writeProgram (instructions);
             
             VirtualMachine vm;
             vm.execute(instructions);
@@ -522,6 +576,6 @@ int main(int argc, char** argv){
     // std::vector<token> tokens = parser.parseProgram((char*)"   \t\n\n\t \t\n");
     // parser.writeProgram (tokens);
 
-    Application app(argc, argv);
-    app.run ();
+    Application app;
+    app.run (argc, argv);
 }
