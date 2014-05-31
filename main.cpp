@@ -30,8 +30,8 @@ enum OP_CODES {
     OP_JUMP,
     OP_JZERO,
     OP_JNEG,
-    OP_ENDOFSUBROUTINE,
-    OP_ENDOFPROGRAM,
+    OP_END_SUBROUTINE,
+    OP_END_PROGRAM,
     // I/O
     OP_PRINT_C,
     OP_PRINT_I,
@@ -147,8 +147,8 @@ whiteOperator validOperators[] = {
     { "\n \n"  , PARAM_LABEL , OP_JUMP            , "jump" }            , // Jump unconditionally to a label
     { "\n\t "  , PARAM_LABEL , OP_JZERO           , "jzero" }           , // Jump to a label if the top of the stack is zero
     { "\n\t\t" , PARAM_LABEL , OP_JNEG            , "jneg" }            , // Jump to a label if the top of the stack is zero
-    { "\n\t\n" , PARAM_NONE  , OP_ENDOFSUBROUTINE , "endofsubroutine" } , // End a subroutine and transfer control back to the caller
-    { "\n\n\n" , PARAM_NONE  , OP_ENDOFPROGRAM    , "endofprogram" }    , 
+    { "\n\t\n" , PARAM_NONE  , OP_END_SUBROUTINE , "endofsubroutine" } , // End a subroutine and transfer control back to the caller
+    { "\n\n\n" , PARAM_NONE  , OP_END_PROGRAM    , "endofprogram" }    , 
     /*
     I/O (IMP: [Tab][LF])
 
@@ -263,11 +263,16 @@ public:
 
 
 class VirtualMachine {
-    std::stack<int> stk;
-    std::map<std::string, int> labels;
-    int ip;
+    std::stack<int> stk;    // stack
+    std::vector<int> heap;  // heap
+    std::map<std::string, int> labels; // routine labels
+    std::stack<int> callstack; // List of alreayd executed calls so it is possible to transfer back to control to the caller at the end of a routine
+    int ip; // instruction pointer;
     Parser parser;
     void executeInstruction (token* instruction){
+        /*
+            Stack instructions
+        */
         if (instruction->op->opCodeId == OP_PUSH){
             stk.push (parser.parseInteger(instruction->paramValue));
             ++ip;   
@@ -277,13 +282,25 @@ class VirtualMachine {
             stk.push (stk.top());
             ++ip;
         }
+        else if (instruction->op->opCodeId == OP_DISCARD){
+            // todo: check for existence
+            stk.pop();
+            ++ip;
+        }
+        /*
+            Todo: implement copy, slide and swap
+        */
+        /*
+            Arithmetic instructions
+            Should be refactored into something shorter
+        */
         else if (instruction->op->opCodeId == OP_ADD){
             // todo: check stack size
             int a = stk.top();
             stk.pop();
             int b = stk.top();
             stk.pop();
-            stk.push (a + b);
+            stk.push (b + a);
             ++ip;
         }
         else if (instruction->op->opCodeId == OP_SUB){
@@ -295,10 +312,37 @@ class VirtualMachine {
             stk.push (b - a);
             ++ip;
         }
-        else if (instruction->op->opCodeId == OP_SETLABEL){
-            // Label creation has already been done during initialization
+        else if (instruction->op->opCodeId == OP_MUL){
+            // todo: check stack size
+            int a = stk.top();
+            stk.pop();
+            int b = stk.top();
+            stk.pop();
+            stk.push (b * a);
             ++ip;
         }
+        else if (instruction->op->opCodeId == OP_DIV){
+            // todo: check stack size
+            int a = stk.top();
+            stk.pop();
+            int b = stk.top();
+            stk.pop();
+            stk.push (b / a);
+            ++ip;
+        }
+        else if (instruction->op->opCodeId == OP_MOD){
+            // todo: check stack size
+            int a = stk.top();
+            stk.pop();
+            int b = stk.top();
+            stk.pop();
+            stk.push (b % a);
+            ++ip;
+        }
+
+        /*
+            I/O operations
+        */
         else if (instruction->op->opCodeId == OP_PRINT_I){
             // todo: check stack size
             int stackTop = stk.top();
@@ -313,6 +357,25 @@ class VirtualMachine {
             printf ("%c", (char)stackTop);
             ++ip;
         }
+        // Todo : implement read_i and read_c
+        
+
+        /*
+            Flow control instructions
+        */
+        else if (instruction->op->opCodeId == OP_SETLABEL){
+            // Label creation has already been done during initialization
+            ++ip;
+        }
+        else if (instruction->op->opCodeId == OP_CALL_SUBROUTINE){
+            callstack.push (ip);
+            // todo: check for existence
+            ip = labels[instruction->paramValue];
+        }
+        else if (instruction->op->opCodeId == OP_JUMP){
+            // todo: check for existence
+            ip = labels[instruction->paramValue];
+        }
         else if (instruction->op->opCodeId == OP_JZERO){
             // todo: check stack size
             int stackTop = stk.top();
@@ -322,19 +385,31 @@ class VirtualMachine {
             else
                 ++ip;
         }
-        else if (instruction->op->opCodeId == OP_JUMP){
-            // todo: check for existence
-            ip = labels[instruction->paramValue];
-        }
-        else if (instruction->op->opCodeId == OP_DISCARD){
-            // todo: check for existence
+        else if (instruction->op->opCodeId == OP_JNEG){
+            // todo: check stack size
+            int stackTop = stk.top();
             stk.pop();
-            ++ip;
+            if (stackTop < 0)
+                ip = labels[instruction->paramValue];
+            else
+                ++ip;
         }
-        else if (instruction->op->opCodeId == OP_ENDOFPROGRAM){
+        else if (instruction->op->opCodeId == OP_END_SUBROUTINE){
+            // todo: check for validity
+            ip = callstack.top ()+1;
+            callstack.pop();
+        }
+        else if (instruction->op->opCodeId == OP_END_PROGRAM){
             printf ("\n\tEND\n\n");
             ip = -1;
         }
+        /*
+            Heap manipulation
+        */
+        // Todo : implement store and retrieve
+        /*
+            Error
+        */
         else {
             printf ("Unkown instruction : %s\n", instruction->op->description.c_str());
             ++ip;
@@ -345,6 +420,10 @@ public:
         ip = 0;
         labels.clear();
         stk = std::stack<int>();
+        callstack = std::stack<int>();
+        heap.clear();
+        // Defaut size = 64 bytes, resized when necessary
+        heap.resize(64);
         
         for (int i = 0; i < instructions.size(); ++i){
             if (instructions[i].op->opCodeId == OP_SETLABEL){
